@@ -1,0 +1,31 @@
+{
+  "name": "request-wrapper",
+  "version": "0.1.0",
+  "description": "A capsulation for request which is a node popular lib",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yedaodao/request-wrapper.git"
+  },
+  "keywords": [
+    "request",
+    "promise"
+  ],
+  "author": "yedaodao",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/yedaodao/request-wrapper/issues"
+  },
+  "homepage": "https://github.com/yedaodao/request-wrapper#readme",
+  "dependencies": {
+    "bluebird": "^3.3.5",
+    "lodash": "^4.11.1",
+    "request": "^2.72.0"
+  },
+  "devDependencies": {
+    "mocha": "^2.4.5"
+  }
+}

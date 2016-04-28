@@ -1,0 +1,6 @@
+.tmp
+.idea
+.project
+log
+.DS_store
+node_modules
