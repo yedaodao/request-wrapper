@@ -21,8 +21,8 @@
   },
   "homepage": "https://github.com/yedaodao/request-wrapper#readme",
   "dependencies": {
-    "bluebird": "^3.3.5",
     "lodash": "^4.11.1",
+    "q": "^1.4.1",
     "request": "^2.72.0"
   },
   "devDependencies": {

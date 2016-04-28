@@ -1,6 +1,6 @@
 var _ = require('lodash'),
     request = require('request'),
-    Q = require('bluebird');
+    Q = require('q');
 
 
 var defaultReq = {
@@ -83,7 +83,7 @@ reqHttp.prototype.request = function (config) {
         assertArgFn(func);
 
         promise.then(function (res) {
-            func(res.body, res.statusCode, res.headers);
+            func(res.body, res.statusCode, res.headers, res);
         });
         return promise;
     };
@@ -94,13 +94,8 @@ reqHttp.prototype.request = function (config) {
      */
     promise.error = function (func) {
         assertArgFn(func);
-
         promise.then(null, function (res) {
-            if (res.statusCode) {
-                func(res.body, res.statusCode);
-            } else {
-                func(res);
-            }
+            func(res.body, res.statusCode, res.headers, res);
         });
         return promise;
     };
