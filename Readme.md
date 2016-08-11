@@ -20,17 +20,17 @@ var http = new RequestWrapper();
 http.request({
     url: "https://nodejs.org/en/"
 })
-    .success(function (body, code, headers, res) {
-        console.log(body);
+    .then(function (res) {
+        console.log(res);
     })
-    .error(function (body, code, headers, res) {
-        console.log(body, code);
+    .error(function (err) {
+        console.log(err);
     });
 ```
 
 ## Dependencies
 
-It depends on *q* which is another popular promise lib. But I will replace it with *bluebird* because of perfermence later.
+It depends on *bluebird* which is popular promise lib.
 
 ## API
 
@@ -52,28 +52,35 @@ http.request({
 })
 ```
 
-### .success(body, status, headers, res)
+### .then(res)
 
-The method like *then* for success. 
+The Object includes all response infomation. You can get body using ```res.body``` and so on.
 
-### .error(body, status, headers, res)
+### .catch(error)
 
-The method for *then* for failed request. 
+The Object like following:
 
-### .setCallback(err, res, body, defered)
+```json
+{
+	error: "error object or error msg",
+	response: "whole response infomation like res in then method"
+}
+``` 
 
-You can modify the logic for judging success via this method. In addition, you must use `defered` arg to return a promise result.
+### .setCallback(res, body, resolve, reject)
+
+You can modify the logic for judging success via this method. In addition, you must use `resolve` or `reject` method to return `res` object.
 
 ```javascript
-http.setCallback(function(err, res, body, defered){
+http.setCallback(function(res, body, resolve, reject){
 	var code = res ? res.statusCode : null;
         if (!code || code < 200 || code >= 400) {
-            return defered.reject(res);
+            return reject(res);
         }
         if (body.error) {
-            return defered.reject(res);
+            return reject(res);
         }
-        return defered.resolve(res);
+        resolve(res);
 })
 ```
 

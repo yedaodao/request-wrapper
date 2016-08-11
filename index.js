@@ -1,6 +1,6 @@
 var _ = require('lodash'),
-    request = require('request'),
-    Q = require('q');
+    request = require('request-promise'),
+    Promise = require('bluebird');
 
 
 var defaultReq = {
@@ -9,44 +9,44 @@ var defaultReq = {
     headers: {
         'Content-Type': 'application/json;charset=utf-8'
     },
-    timeout: 10000
+    timeout: 10000,
+    resolveWithFullResponse: true,
+    simple: false
 };
 
 /**
  * Class: request wrapper for getting promise
  * @param commonConfig like request config
  */
-function reqHttp(commonConfig) {
+function ReqHttp(commonConfig) {
     this.defaultConfig = _.assign({}, defaultReq, commonConfig);
-    this.defaultCallback = function (err, res, body, defered) {
+    this.defaultCallback = function (res, body, resolve, reject) {
         var code = res ? res.statusCode : null;
         if (!code || code < 200 || code >= 400) {
-            return defered.reject(res);
+            return reject(res);
         }
-        return defered.resolve(res);
+        return resolve(res);
     };
     this.transformErr = [];
     this.transformReq = [];
     this.transformRes = [];
 }
 
-reqHttp.prototype.setCallBack = function (func) {
+ReqHttp.prototype.setCallBack = function (func) {
     assertArgFn(func);
 
     this.defaultCallback = func;
 };
 
-reqHttp.prototype.request = function (config) {
+ReqHttp.prototype.request = function (config) {
     var reqConfig = _.assign({}, this.defaultConfig, config);
     reqConfig.headers = mergeHeaders(this.defaultConfig, config);
     var reqData = transformData(reqConfig, reqConfig.body, reqConfig.headers, null, this.transformReq),
         headers = reqConfig.headers,
-        defered = Q.defer(),
-        promise = defered.promise,
         self = this;
 
     // pre-process headers
-    if (_.isUndefined(headers)) {
+    if (!_.isUndefined(headers)) {
         for (var header in headers) {
             if (header && header.toLowerCase() === 'content-type') {
                 delete headers[header];
@@ -64,43 +64,40 @@ reqHttp.prototype.request = function (config) {
         reqConfig.url = url;
     }
 
-    // real request
-    request(reqConfig, function (err, res, body) {
-        if (err) {
-            err = transformErr(reqConfig, err, res, body, self.transformErr);
-            return defered.reject(err);
-        }
-        var resData = transformData(reqConfig, res.body, res.headers, res.statusCode, self.transformRes);
-        return self.defaultCallback(err, res, resData, defered);
-    });
-
-    /**
-     * custom the success handler on promise obj
-     * @param func
-     * @returns {*}
-     */
-    promise.success = function (func) {
-        assertArgFn(func);
-
-        promise.then(function (res) {
-            func(res.body, res.statusCode, res.headers, res);
+    return new Promise(function (resolve, reject) {
+        // real request
+        request(reqConfig)
+            .then(function (res) {
+                var resData = transformData(reqConfig, res.body, res.headers, res.statusCode, self.transformRes);
+                self.defaultCallback(res, resData, resolve, reject);
+            })
+            .catch(function (err) {
+                reject({
+                    error: err,
+                    response: null
+                });
+            });
+    })
+        .then(function (res) {
+            return res;
+        })
+        .catch(function (errObj) {
+            if (!_.isObject(errObj)) {
+                return {
+                    error: 'unknown',
+                    response: {}
+                }
+            }
+            if (!_.has(errObj, 'response') || !_.has(errObj, 'error')) {
+                errObj = {
+                    error: 'http error',
+                    response: errObj
+                }
+            }
+            var body = _.has(errObj, 'response.body') ? errObj.response.body : {};
+            errObj.error = transformErr(reqConfig, errObj.error, errObj.response, body, self.transformErr);
+            return errObj;
         });
-        return promise;
-    };
-
-    /**
-     * custom the error handler on promise obj
-     * @param func
-     */
-    promise.error = function (func) {
-        assertArgFn(func);
-        promise.then(null, function (res) {
-            func(res.body, res.statusCode, res.headers, res);
-        });
-        return promise;
-    };
-
-    return promise;
 
 
     /**
@@ -179,4 +176,4 @@ function mergeHeaders() {
     return headers;
 }
 
-module.exports = reqHttp;
+module.exports = ReqHttp;
