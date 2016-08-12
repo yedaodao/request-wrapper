@@ -1,18 +1,19 @@
 var _ = require('lodash'),
     request = require('request-promise'),
-    Promise = require('bluebird');
+    Promise = require('bluebird'),
+    RequestError = require('request-promise/errors');
 
 
 var defaultReq = {
-    method: 'GET',
-    json: true,
-    headers: {
-        'Content-Type': 'application/json;charset=utf-8'
+        method: 'GET',
+        json: true,
+        headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+        },
+        timeout: 10000,
+        resolveWithFullResponse: true
     },
-    timeout: 10000,
-    resolveWithFullResponse: true,
-    simple: false
-};
+    StatusCodeError = RequestError.StatusCodeError;
 
 /**
  * Class: request wrapper for getting promise
@@ -20,23 +21,10 @@ var defaultReq = {
  */
 function ReqHttp(commonConfig) {
     this.defaultConfig = _.assign({}, defaultReq, commonConfig);
-    this.defaultCallback = function (res, body, resolve, reject) {
-        var code = res ? res.statusCode : null;
-        if (!code || code < 200 || code >= 400) {
-            return reject(res);
-        }
-        return resolve(res);
-    };
     this.transformErr = [];
     this.transformReq = [];
     this.transformRes = [];
 }
-
-ReqHttp.prototype.setCallBack = function (func) {
-    assertArgFn(func);
-
-    this.defaultCallback = func;
-};
 
 ReqHttp.prototype.request = function (config) {
     var reqConfig = _.assign({}, this.defaultConfig, config);
@@ -68,35 +56,17 @@ ReqHttp.prototype.request = function (config) {
         // real request
         request(reqConfig)
             .then(function (res) {
-                var resData = transformData(reqConfig, res.body, res.headers, res.statusCode, self.transformRes);
-                self.defaultCallback(res, resData, resolve, reject);
+                transformData(reqConfig, res.body, res.headers, res.statusCode, self.transformRes);
+                resolve(res);
             })
             .catch(function (err) {
-                reject({
-                    error: err,
-                    response: null
-                });
+                reject(err);
             });
     })
-        .then(function (res) {
-            return res;
-        })
         .catch(function (errObj) {
-            if (!_.isObject(errObj)) {
-                return {
-                    error: 'unknown',
-                    response: {}
-                }
-            }
-            if (!_.has(errObj, 'response') || !_.has(errObj, 'error')) {
-                errObj = {
-                    error: 'http error',
-                    response: errObj
-                }
-            }
-            var body = _.has(errObj, 'response.body') ? errObj.response.body : {};
-            errObj.error = transformErr(reqConfig, errObj.error, errObj.response, body, self.transformErr);
-            return errObj;
+            var res = errObj.response || {};
+            transformErr(reqConfig, errObj, res, self.transformErr);
+            throw errObj;
         });
 
 
@@ -128,17 +98,16 @@ ReqHttp.prototype.request = function (config) {
      * @param reqConfig
      * @param err
      * @param res
-     * @param body
      * @param fns
      * @returns {*}
      */
-    function transformErr(reqConfig, err, res, body, fns) {
+    function transformErr(reqConfig, err, res, fns) {
         if (_.isFunction(fns)) {
-            fns(reqConfig, err, res, body);
+            fns(reqConfig, err, res);
         }
         if (_.isArray(fns)) {
             fns.forEach(function (fn) {
-                fn(reqConfig, err, res, body);
+                fn(reqConfig, err, res);
             });
         }
         return err;
