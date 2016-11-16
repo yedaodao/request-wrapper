@@ -1,6 +1,6 @@
 {
   "name": "request-wrapper",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A capsulation for request which is a node popular lib",
   "main": "index.js",
   "scripts": {
