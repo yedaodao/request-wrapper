@@ -20,27 +20,20 @@ var defaultReq = {
  * @param commonConfig like request config
  */
 function ReqHttp(commonConfig) {
+    var headers = mergeHeaders(defaultReq,commonConfig);
     this.defaultConfig = _.assign({}, defaultReq, commonConfig);
+    this.defaultConfig.headers = headers;
     this.transformErr = [];
     this.transformReq = [];
     this.transformRes = [];
 }
 
 ReqHttp.prototype.request = function (config) {
+    var headers = mergeHeaders(this.defaultConfig, config);
     var reqConfig = _.assign({}, this.defaultConfig, config);
-    reqConfig.headers = mergeHeaders(this.defaultConfig, config);
+    reqConfig.headers = headers;
     var reqData = transformData(reqConfig, reqConfig.body, reqConfig.headers, null, this.transformReq),
-        headers = reqConfig.headers,
         self = this;
-
-    // pre-process headers
-    if (!_.isUndefined(headers)) {
-        for (var header in headers) {
-            if (header && header.toLowerCase() === 'content-type') {
-                delete headers[header];
-            }
-        }
-    }
 
     // handle url
     if (reqConfig.params != null) {
