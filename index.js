@@ -20,7 +20,7 @@ var defaultReq = {
  * @param commonConfig like request config
  */
 function ReqHttp(commonConfig) {
-    var headers = mergeHeaders(defaultReq,commonConfig);
+    var headers = mergeHeaders(defaultReq, commonConfig);
     this.defaultConfig = _.assign({}, defaultReq, commonConfig);
     this.defaultConfig.headers = headers;
     this.transformErr = [];
@@ -127,6 +127,9 @@ function mergeHeaders() {
     var headers = {},
         args = (arguments && arguments.length) ? [].slice.call(arguments, 0) : [];
     args.forEach(function (item) {
+        if (!item) {
+            return false;
+        }
         var h = item['headers'];
         if (h == null) {
             return false;
